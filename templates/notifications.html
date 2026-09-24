@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Notifications | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">ALERTS</span>
+    <h1>Notifications</h1>
+  </div>
+  <a class="btn secondary" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+</div>
+
+{% if notifications %}
+  <div class="stack-list">
+    {% for item in notifications %}
+      <article class="card mini-card">
+        <div>
+          <div class="verified-row">
+            <strong>{{ item['title'] }}</strong>
+            <span class="badge {{ item['kind'] }}">{{ item['kind'] }}</span>
+          </div>
+          <p>{{ item['body'] }}</p>
+          <small class="muted">{{ item['created_at'] }}</small>
+        </div>
+        {% if item['link'] %}
+          <a class="btn small secondary" href="{{ item['link'] }}">View</a>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <h3>No notifications</h3>
+    <p>You are all caught up.</p>
+  </div>
+{% endif %}
+{% endblock %}

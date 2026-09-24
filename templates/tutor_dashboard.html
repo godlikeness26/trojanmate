@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Tutor Dashboard | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">TUTOR</span>
+    <h1>My Tutoring Dashboard</h1>
+  </div>
+  <div class="header-actions">
+    <a class="btn secondary" href="{{ url_for('messages') }}">Messages</a>
+    <a class="btn" href="{{ url_for('tutor_requests') }}">Find Tutees</a>
+    <a class="btn secondary" href="{{ url_for('tutor_profile') }}">Edit profile</a>
+  </div>
+</div>
+
+{% if not profile['verified'] %}
+<div class="alert warning">Your tutor profile is pending administrator verification. Students cannot book you until verified.</div>
+{% endif %}
+
+<div class="grid stats">
+  <div class="card stat-card">
+    <b>{{ bookings|length }}</b>
+    <span>Total sessions</span>
+  </div>
+  <div class="card stat-card">
+    <b>{{ pending|length }}</b>
+    <span>Pending</span>
+  </div>
+  <div class="card stat-card">
+    <b>{{ confirmed|length }}</b>
+    <span>Confirmed</span>
+  </div>
+  <div class="card stat-card">
+    <b>₱{{ '%.2f'|format(earnings) }}</b>
+    <span>Completed earnings</span>
+  </div>
+</div>
+
+<section class="card welcome-panel">
+  <div>
+    <span class="eyebrow">PROFILE STATUS</span>
+    <h2>{{ current_user['name'] }}</h2>
+    <p>{{ profile['bio'] or 'Add a bio so students understand your expertise and mentoring style.' }}</p>
+  </div>
+  <div class="profile-status-wrap">
+    <span class="badge {% if profile['verified'] %}confirmed{% else %}pending{% endif %}">
+      {% if profile['verified'] %}Verified{% else %}Pending verification{% endif %}
+    </span>
+    <div class="detail-row"><strong>Hourly rate:</strong> ₱{{ '%.2f'|format(profile['hourly_rate']) }}/hour</div>
+  </div>
+</section>
+
+<div class="two-col-layout">
+  <section>
+    <div class="section-header">
+      <h2>Booking requests</h2>
+    </div>
+    {% if bookings %}
+      {% for b in bookings %}
+        <article class="card booking-card">
+          <div>
+            <h3>{{ b['subject_name'] }} • {{ b['student_name'] }}</h3>
+            <p>{{ b['session_date'] }} • {{ b['start_time'] }}–{{ b['end_time'] }}</p>
+            {% if b['request_note'] %}<p class="muted">{{ b['request_note'] }}</p>{% endif %}
+          </div>
+          <div class="booking-meta">
+            <span class="badge {{ b['status'] }}">{{ b['status'] }}</span>
+            {% if b['status'] == 'pending' %}
+              <div class="inline-actions">
+                <form method="post" action="{{ url_for('booking_status', booking_id=b['id']) }}">
+                  <input type="hidden" name="status" value="confirmed">
+                  <button class="btn small" type="submit">Confirm</button>
+                </form>
+                <form method="post" action="{{ url_for('booking_status', booking_id=b['id']) }}">
+                  <input type="hidden" name="status" value="rejected">
+                  <button class="btn small danger" type="submit">Reject</button>
+                </form>
+              </div>
+            {% elif b['status'] == 'confirmed' %}
+              <form method="post" action="{{ url_for('booking_status', booking_id=b['id']) }}">
+                <input type="hidden" name="status" value="completed">
+                <button class="btn small" type="submit">Mark completed</button>
+              </form>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <h3>No sessions yet</h3>
+        <p>When a student books a session, it will appear here.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <aside>
+    <div class="section-header">
+      <h2>Quick actions</h2>
+    </div>
+    <div class="stack-list">
+      <a class="mini-action" href="{{ url_for('tutor_profile') }}">Edit profile</a>
+      <a class="mini-action" href="{{ url_for('messages') }}">Manage messages</a>
+      <a class="mini-action" href="{{ url_for('tutors') }}">View tutors</a>
+    </div>
+
+    <div class="section-header space-top">
+      <h2>Recent reviews</h2>
+    </div>
+    {% if recent_feedback %}
+      <div class="stack-list">
+        {% for review in recent_feedback %}
+          <div class="mini-card review-item">
+            <div>
+              <strong>{{ review['student_name'] }}</strong>
+              <p>Rated {{ review['rating'] }} / 5</p>
+            </div>
+            <span class="rating-line">★ {{ review['rating'] }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state compact">
+        <p>No student reviews yet.</p>
+      </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

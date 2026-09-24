@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}TrojanMate | Home{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="eyebrow">ACADEMIC SUPPORT</span>
+    <h1>Find the right tutor.<br>Learn with confidence.</h1>
+    <p>TrojanMate organizes tutor discovery, verification, scheduling, tutoring sessions, and feedback in one platform.</p>
+    {% if current_user %}
+      <a class="btn" href="{{ url_for('tutors') }}">Find a Tutor</a>
+    {% else %}
+      <a class="btn" href="{{ url_for('register') }}">Get Started</a>
+      <a class="btn secondary" href="{{ url_for('login') }}">Log In</a>
+    {% endif %}
+  </div>
+  <div class="hero-card">
+    <div class="stat">✓ Verified Tutors</div>
+    <div class="stat">📅 Organized Booking</div>
+    <div class="stat">⭐ Feedback & Ratings</div>
+    <div class="stat">🔐 Secure Accounts</div>
+  </div>
+</section>
+
+<h2>Featured Tutors</h2>
+<div class="grid">
+{% for tutor in tutors %}
+  <article class="card">
+    <div class="avatar">{{ tutor['name'][0]|upper }}</div>
+    <h3>{{ tutor['name'] }}</h3>
+    <p class="muted">{{ tutor['qualifications'] or 'Qualified academic tutor' }}</p>
+    <div class="rating">★ {{ tutor['rating'] }} <span>({{ tutor['rating_count'] }} reviews)</span></div>
+    <p>{{ tutor['bio'][:130] }}{% if tutor['bio']|length > 130 %}...{% endif %}</p>
+    {% if current_user %}
+      <a class="btn small" href="{{ url_for('tutor_detail', tutor_id=tutor['id']) }}">View Profile</a>
+    {% endif %}
+  </article>
+{% else %}
+  <div class="empty">No verified tutors are available yet.</div>
+{% endfor %}
+</div>
+{% endblock %}

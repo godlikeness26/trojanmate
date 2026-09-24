@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}My Tutor Profile | TrojanMate{% endblock %}
+{% set days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] %}
+{% block content %}
+<div class="pagehead"><div><span class="eyebrow">TUTOR PROFILE</span><h1>Manage My Profile</h1></div></div>
+<form method="post" class="card">
+<label>Bio<textarea name="bio" placeholder="Introduce your tutoring style and strengths.">{{ profile['bio'] }}</textarea></label>
+<label>Qualifications<textarea name="qualifications" placeholder="Degrees, certifications, relevant academic standing...">{{ profile['qualifications'] }}</textarea></label>
+<label>Experience<textarea name="experience">{{ profile['experience'] }}</textarea></label>
+<label>Hourly Rate (₱)<input type="number" step="0.01" min="0" name="hourly_rate" value="{{ profile['hourly_rate'] }}"></label>
+<h2>Subjects / Services</h2>
+<div class="checks">{% for s in subjects %}<label><input type="checkbox" name="subjects" value="{{ s['id'] }}" {% if s['id'] in selected %}checked{% endif %}> {{ s['name'] }}</label>{% endfor %}</div>
+<h2>Availability</h2>
+{% for day in days %}
+<div class="dayrow"><b>{{ day }}</b><input type="time" name="start_{{ day }}" value="{{ availability[day]['start_time'] if day in availability else '' }}"><span>to</span><input type="time" name="end_{{ day }}" value="{{ availability[day]['end_time'] if day in availability else '' }}"></div>
+{% endfor %}
+<button class="btn" type="submit">Save Profile</button>
+</form>
+{% endblock %}

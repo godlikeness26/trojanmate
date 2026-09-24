@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{% if thread_user %}Messages with {{ thread_user['name'] }}{% else %}Messages{% endif %} | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">MESSAGING</span>
+    <h1>Messages</h1>
+  </div>
+  <a class="btn secondary" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+</div>
+
+<div class="message-layout">
+  <aside class="sidebar-panel">
+    <div class="section-header">
+      <h2>Conversations</h2>
+    </div>
+    {% if conversations %}
+      <div class="conversation-list">
+        {% for conv in conversations %}
+          <a class="conversation-item" href="{{ url_for('message_thread', other_id=conv['id']) }}">
+            <div>
+              <strong>{{ conv['name'] }}</strong><br>
+              <span>{{ conv['role']|title }}</span>
+            </div>
+            {% if conv['unread_count'] %}
+              <span class="badge pending">{{ conv['unread_count'] }}</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state compact">
+        <p>No conversations yet.</p>
+      </div>
+    {% endif %}
+  </aside>
+
+  <section class="thread-panel">
+    {% if thread_user %}
+      <div class="section-header">
+        <h2>{{ thread_user['name'] }}</h2>
+      </div>
+
+      <div class="thread-list">
+        {% for msg in messages %}
+          <div class="message-bubble {% if msg['sender_id'] == current_user['id'] %}me{% endif %}">
+            <strong>{% if msg['sender_id'] == current_user['id'] %}You{% else %}{{ msg['sender_name'] }}{% endif %}</strong>
+            <p>{{ msg['body'] }}</p>
+            <small>{{ msg['created_at'] }}</small>
+          </div>
+        {% endfor %}
+      </div>
+
+      <form method="post" class="message-form">
+        <input type="hidden" name="receiver_id" value="{{ thread_user['id'] }}">
+        <textarea name="body" rows="3" placeholder="Write a message..." required></textarea>
+        <button class="btn" type="submit">Send message</button>
+      </form>
+    {% else %}
+      <div class="empty-state">
+        <h3>Select a conversation</h3>
+        <p>Open a message thread to chat with a student, tutor, or administrator.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

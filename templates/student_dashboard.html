@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">STUDENT</span>
+    <h1>My Academic Support</h1>
+  </div>
+  <div class="header-actions">
+    <a class="btn secondary" href="{{ url_for('notifications') }}">Alerts</a>
+    <a class="btn" href="{{ url_for('tutors') }}">Find a Tutor</a>
+  </div>
+</div>
+
+<div class="mode-banner">
+  <span class="eyebrow">ACTIVE MODE</span>
+  <strong>Tutee Mode</strong>
+</div>
+
+<section class="welcome-panel card">
+  <div>
+    <span class="eyebrow">WELCOME</span>
+    <h2>Hello, {{ current_user['name'] }}.</h2>
+    <p>Track bookings, review tutor availability, and keep your academic support on schedule.</p>
+  </div>
+  <div class="welcome-actions">
+    <a href="{{ url_for('tutors') }}" class="btn">Find a Tutor</a>
+    <a href="{{ url_for('messages') }}" class="btn secondary">Messages</a>
+  </div>
+</section>
+
+<div class="grid stats">
+  <div class="card stat-card">
+    <b>{{ bookings|length }}</b>
+    <span>Total Bookings</span>
+  </div>
+  <div class="card stat-card">
+    <b>{{ bookings|selectattr('status','equalto','pending')|list|length }}</b>
+    <span>Pending</span>
+  </div>
+  <div class="card stat-card">
+    <b>{{ bookings|selectattr('status','equalto','confirmed')|list|length }}</b>
+    <span>Confirmed</span>
+  </div>
+  <div class="card stat-card">
+    <b>{{ bookings|selectattr('status','equalto','completed')|list|length }}</b>
+    <span>Completed</span>
+  </div>
+</div>
+
+<div class="info-bar">
+  <div class="chip">Average rating: <strong>{{ '%.1f'|format(avg_rating) }}</strong></div>
+  <div class="chip">Reviews submitted: <strong>{{ review_count }}</strong></div>
+</div>
+
+<div class="two-col-layout">
+  <section>
+    <div class="section-header">
+      <h2>Upcoming tutoring sessions</h2>
+      <a href="{{ url_for('tutors') }}" class="text-link">Book another session</a>
+    </div>
+    {% if upcoming %}
+      {% for b in upcoming %}
+        <article class="card booking-card">
+          <div>
+            <h3>{{ b['subject_name'] }} with {{ b['tutor_name'] }}</h3>
+            <p>{{ b['session_date'] }} • {{ b['start_time'] }}–{{ b['end_time'] }}</p>
+            {% if b['request_note'] %}<p class="muted">{{ b['request_note'] }}</p>{% endif %}
+          </div>
+          <div class="booking-meta">
+            <span class="badge {{ b['status'] }}">{{ b['status'] }}</span>
+            <span class="muted">{{ b['payment_status'] }}</span>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <h3>No upcoming sessions</h3>
+        <p>Schedule with a verified tutor to get academic support.</p>
+        <a class="btn" href="{{ url_for('tutors') }}">Find a Tutor</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <aside>
+    <div class="section-header">
+      <h2>Recent bookings</h2>
+    </div>
+    {% if recent %}
+      <div class="stack-list">
+        {% for b in recent %}
+          <div class="mini-card">
+            <div>
+              <strong>{{ b['subject_name'] }}</strong>
+              <p>{{ b['tutor_name'] }}</p>
+            </div>
+            <span class="badge {{ b['status'] }}">{{ b['status'] }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state compact">
+        <p>No booking history yet.</p>
+      </div>
+    {% endif %}
+  </aside>
+</div>
+
+<section class="card section-block">
+  <div class="section-header">
+    <h2>Available tutors</h2>
+    <a href="{{ url_for('tutors') }}" class="text-link">Browse all</a>
+  </div>
+  {% if tutors %}
+    <div class="tutor-grid compact-grid">
+      {% for tutor in tutors %}
+        <article class="tutor-card">
+          <div class="tutor-card-head">
+            <div class="avatar small">{{ tutor['name'][0]|upper }}</div>
+            <div>
+              <h3>{{ tutor['name'] }}</h3>
+              <div class="rating-line">★ {{ tutor['rating'] }} <span>({{ tutor['rating_count'] }} reviews)</span></div>
+            </div>
+          </div>
+          <div class="tag-list">
+            {% if tutor['subject_names'] %}
+              {% for subject in tutor['subject_names'].split(',')[:3] %}
+                <span class="tag">{{ subject.strip() }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="tag">Academic support</span>
+            {% endif %}
+          </div>
+          <p class="muted">{{ tutor['bio'][:100] if tutor['bio'] else 'Qualified and ready to support students.' }}{% if tutor['bio'] and tutor['bio']|length > 100 %}...{% endif %}</p>
+          <div class="card-actions tight">
+            <a class="btn small" href="{{ url_for('tutor_detail', tutor_id=tutor['id']) }}">View profile</a>
+            <a class="btn small secondary" href="{{ url_for('book', tutor_id=tutor['id']) }}">Book session</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state compact">
+      <p>No tutors are available right now.</p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="card section-block">
+  <div class="section-header">
+    <h2>My bookings</h2>
+  </div>
+  {% if bookings %}
+    {% for b in bookings %}
+      <div class="card booking-card nested">
+        <div>
+          <h3>{{ b['subject_name'] }} with {{ b['tutor_name'] }}</h3>
+          <p>{{ b['session_date'] }} • {{ b['start_time'] }}–{{ b['end_time'] }}</p>
+          {% if b['request_note'] %}<p class="muted">{{ b['request_note'] }}</p>{% endif %}
+        </div>
+        <div class="booking-meta">
+          <span class="badge {{ b['status'] }}">{{ b['status'] }}</span>
+          {% if b['status'] == 'completed' %}
+            <form method="post" action="{{ url_for('feedback_submit', booking_id=b['id']) }}" class="feedback-form">
+              <select name="rating" required>
+                <option value="">Rate session</option>
+                <option value="5">5 ★</option>
+                <option value="4">4 ★</option>
+                <option value="3">3 ★</option>
+                <option value="2">2 ★</option>
+                <option value="1">1 ★</option>
+              </select>
+              <input type="text" name="comment" placeholder="Optional comment">
+              <button class="btn small" type="submit">Submit feedback</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state compact">
+      <p>No bookings yet. Start by finding a tutor.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

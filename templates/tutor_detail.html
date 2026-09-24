@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ tutor['name'] }} | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">TUTOR PROFILE</span>
+    <h1>{{ tutor['name'] }}</h1>
+  </div>
+  <a class="btn" href="{{ url_for('tutors') }}">Back to tutors</a>
+</div>
+
+<section class="profile-summary card">
+  <div class="profile-head">
+    <div class="avatar large">{{ tutor['name'][0]|upper }}</div>
+    <div>
+      <div class="verified-row">
+        <h2>{{ tutor['name'] }}</h2>
+        <span class="badge confirmed">Verified tutor</span>
+      </div>
+      <div class="rating-line">★ {{ tutor['rating'] }} <span>({{ tutor['rating_count'] }} reviews)</span></div>
+      <p>{{ tutor['bio'] or 'No biography provided yet.' }}</p>
+    </div>
+  </div>
+</section>
+
+<div class="two-col-layout profile-layout">
+  <section>
+    <div class="card section-block">
+      <h2>Qualifications</h2>
+      <p>{{ tutor['qualifications'] or 'No qualifications provided yet.' }}</p>
+    </div>
+
+    <div class="card section-block">
+      <h2>Subjects & services</h2>
+      <div class="tag-list">
+        {% for s in subjects %}
+          <span class="tag">{{ s['name'] }}</span>
+        {% else %}
+          <span class="muted">No subjects listed.</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card section-block">
+      <h2>Availability</h2>
+      {% if availability_by_day %}
+        <div class="availability-list">
+          {% for day, slots in availability_by_day.items() %}
+            <div class="availability-row">
+              <strong>{{ day }}</strong>
+              <span>
+                {% for slot in slots %}
+                  {{ slot['start'] }}–{{ slot['end'] }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No availability listed.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <aside>
+    <div class="card booking-side-panel">
+      <h2>Book a session</h2>
+      <div class="price-wrap">
+        <strong>₱{{ '%.2f'|format(tutor['hourly_rate']) }}</strong>
+        <span>per hour</span>
+      </div>
+      <ul class="feature-list">
+        <li>Verified tutor</li>
+        <li>Flexible booking availability</li>
+        <li>Academic support and review</li>
+      </ul>
+      <a class="btn" href="{{ url_for('book', tutor_id=tutor['id']) }}">Request booking</a>
+    </div>
+  </aside>
+</div>
+
+<section class="card section-block">
+  <div class="section-header">
+    <h2>Student reviews</h2>
+  </div>
+  {% if feedback %}
+    {% for item in feedback %}
+      <div class="review-item card nested">
+        <div class="review-head">
+          <strong>{{ item['student_name'] }}</strong>
+          <span class="rating-line">★ {{ item['rating'] }}</span>
+        </div>
+        <p>{{ item['comment'] or 'No comment provided.' }}</p>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state compact">
+      <p>No reviews yet for this tutor.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

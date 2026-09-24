@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Book {{ tutor['name'] }} | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">BOOKING</span>
+    <h1>Request a session</h1>
+  </div>
+  <a class="btn secondary" href="{{ url_for('tutor_detail', tutor_id=tutor['id']) }}">Back to profile</a>
+</div>
+
+<div class="card booking-form-shell">
+  <div class="booking-header">
+    <div>
+      <h2>{{ tutor['name'] }}</h2>
+      <p>{{ tutor['bio'] or 'Academic support and review sessions.' }}</p>
+    </div>
+    <div class="booking-rate">
+      <strong>₱{{ '%.2f'|format(tutor['hourly_rate']) }}</strong>
+      <span>per hour</span>
+    </div>
+  </div>
+
+  <form method="post" class="booking-form" id="bookingForm">
+    <div id="bookingAvailabilityData" data-availability='{{ availability_by_day|tojson|safe }}'></div>
+    <div id="bookingBookedDates" data-bookings='{{ bookings_by_date|tojson|safe }}'></div>
+    <div id="bookingRateData" data-rate='{{ tutor["hourly_rate"] }}'></div>
+
+    <div class="booking-grid">
+      <div class="field-group">
+        <label for="subject_id">Subject</label>
+        <select id="subject_id" name="subject_id" required>
+          {% for s in subjects %}
+            <option value="{{ s['id'] }}">{{ s['name'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field-group">
+        <label for="session_date">Date</label>
+        <input id="session_date" type="date" name="session_date" min="" required>
+        <small class="field-hint">Only dates matching the tutor’s availability can be selected.</small>
+      </div>
+    </div>
+
+    <div class="field-group time-selector-group">
+      <label>Select exact session time</label>
+      <div class="booking-time-grid">
+        <div class="field-group compact-field">
+          <label for="start_time">Start time</label>
+          <input id="start_time" type="time" name="start_time" step="60" required>
+        </div>
+        <div class="field-group compact-field">
+          <label for="end_time">End time</label>
+          <input id="end_time" type="time" name="end_time" step="60" required>
+        </div>
+      </div>
+      <small id="timeSelectionHint" class="field-hint">Choose an exact start and end time within the tutor’s availability for the selected day.</small>
+      <div id="bookingTimeSummary" class="booking-time-summary">Session duration and fee will appear here after you choose valid times.</div>
+    </div>
+
+    {% if availability_by_day %}
+      <div class="availability-box">
+        <h3>Schedule</h3>
+        {% for day, slots in availability_by_day.items() %}
+          <div class="availability-row">
+            <strong>{{ day }}</strong>
+            <span>
+              {% for slot in slots %}
+                {{ slot['start'] }}–{{ slot['end'] }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="field-group">
+      <label for="request_note">Learning need</label>
+      <textarea id="request_note" name="request_note" rows="4" placeholder="Tell the tutor what you need support with"></textarea>
+    </div>
+
+    <div class="booking-actions">
+      <button type="button" class="btn secondary" id="reviewBookingBtn">Review booking</button>
+      <button type="submit" class="btn">Submit booking request</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal hidden" id="bookingModal" aria-hidden="true">
+  <div class="modal-backdrop" data-close-modal="bookingModal"></div>
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Confirm your tutoring request</h3>
+      <button type="button" class="close-btn" data-close-modal="bookingModal" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <p><strong>Tutor:</strong> {{ tutor['name'] }}</p>
+      <p><strong>Date:</strong> <span id="modalDate">Not selected</span></p>
+      <p><strong>Time:</strong> <span id="modalTime">Not selected</span></p>
+      <p><strong>Subject:</strong> <span id="modalSubject">Not selected</span></p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn secondary" data-close-modal="bookingModal">Edit details</button>
+      <button type="button" class="btn" id="confirmBookingBtn">Confirm request</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

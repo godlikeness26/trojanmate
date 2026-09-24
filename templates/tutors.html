@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Find Tutors | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">TUTOR DISCOVERY</span>
+    <h1>Find a tutor</h1>
+  </div>
+</div>
+
+<form class="search-panel card" method="get">
+  <div class="search-grid">
+    <div class="field-group">
+      <label for="q">Tutor name</label>
+      <input id="q" name="q" value="{{ q }}" placeholder="Search by tutor name or expertise">
+    </div>
+    <div class="field-group">
+      <label for="subject">Subject</label>
+      <select id="subject" name="subject">
+        <option value="">All subjects</option>
+        {% for s in subjects %}
+          <option value="{{ s['name'] }}" {% if selected_subject == s['name'] %}selected{% endif %}>{{ s['name'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="rating_min">Minimum rating</label>
+      <select id="rating_min" name="rating_min">
+        <option value="0" {% if rating_min == '0' %}selected{% endif %}>Any</option>
+        <option value="4" {% if rating_min == '4' %}selected{% endif %}>4.0+</option>
+        <option value="4.5" {% if rating_min == '4.5' %}selected{% endif %}>4.5+</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="price_max">Max hourly rate</label>
+      <input id="price_max" name="price_max" type="number" min="0" step="50" value="{{ price_max }}" placeholder="₱500">
+    </div>
+    <div class="field-group">
+      <label for="availability">Availability</label>
+      <select id="availability" name="availability">
+        <option value="all" {% if availability == 'all' %}selected{% endif %}>Any day</option>
+        {% for day in availability_days %}
+          <option value="{{ day }}" {% if availability == day %}selected{% endif %}>{{ day }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field-group">
+      <label for="sort">Sort by</label>
+      <select id="sort" name="sort">
+        <option value="rating_desc" {% if sort == 'rating_desc' %}selected{% endif %}>Highest rating</option>
+        <option value="rating_asc" {% if sort == 'rating_asc' %}selected{% endif %}>Lowest rating</option>
+        <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>Name A–Z</option>
+        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Price: low to high</option>
+        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Price: high to low</option>
+      </select>
+    </div>
+  </div>
+  <div class="search-actions">
+    <button class="btn" type="submit">Apply filters</button>
+    <a class="btn secondary" href="{{ url_for('tutors') }}">Reset</a>
+  </div>
+</form>
+
+{% if tutors %}
+  <div class="tutor-grid">
+    {% for tutor in tutors %}
+      <article class="card tutor-card large">
+        <div class="tutor-card-head">
+          <div class="avatar large">{{ tutor['name'][0]|upper }}</div>
+          <div class="tutor-card-info">
+            <div class="verified-row">
+              <h2>{{ tutor['name'] }}</h2>
+              {% if tutor['verified'] %}<span class="badge confirmed">Verified</span>{% endif %}
+            </div>
+            <div class="rating-line">★ {{ tutor['rating'] }} <span>({{ tutor['rating_count'] }} reviews)</span></div>
+            <p class="muted">{{ tutor['experience'] or 'Experienced academic tutor' }}</p>
+          </div>
+        </div>
+
+        <div class="tag-list">
+          {% if tutor['subject_names'] %}
+            {% for subject in tutor['subject_names'].split(',') %}
+              <span class="tag">{{ subject.strip() }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="tag">Academic support</span>
+          {% endif %}
+        </div>
+
+        <p class="tutor-bio">{{ tutor['bio'] or 'No biography provided yet.' }}</p>
+
+        <div class="tutor-meta-row">
+          <div><strong>Experience</strong><span>{{ tutor['experience'] or 'Not specified' }}</span></div>
+          <div><strong>Rate</strong><span>{% if tutor['hourly_rate'] %}₱{{ '%.2f'|format(tutor['hourly_rate']) }}/hour{% else %}Free / not specified{% endif %}</span></div>
+        </div>
+
+        <div class="card-actions">
+          <a class="btn small" href="{{ url_for('tutor_detail', tutor_id=tutor['id']) }}">View profile</a>
+          <a class="btn small secondary" href="{{ url_for('book', tutor_id=tutor['id']) }}">Book session</a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <h3>No tutors match your filters</h3>
+    <p>Try widening your search or resetting the filters.</p>
+    <a class="btn" href="{{ url_for('tutors') }}">Clear filters</a>
+  </div>
+{% endif %}
+{% endblock %}

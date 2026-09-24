@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">ADMINISTRATION</span>
+    <h1>TrojanMate overview</h1>
+  </div>
+  <a class="btn" href="{{ url_for('admin') }}">Manage system</a>
+</div>
+
+<div class="grid stats">
+  <div class="card stat-card"><b>{{ stats.students }}</b><span>Students</span></div>
+  <div class="card stat-card"><b>{{ stats.tutors }}</b><span>Tutors</span></div>
+  <div class="card stat-card"><b>{{ stats.verified }}</b><span>Verified tutors</span></div>
+  <div class="card stat-card"><b>{{ stats.pending }}</b><span>Pending verification</span></div>
+  <div class="card stat-card"><b>{{ stats.bookings }}</b><span>Total bookings</span></div>
+  <div class="card stat-card"><b>{{ stats.completed }}</b><span>Completed sessions</span></div>
+</div>
+
+<div class="two-col-layout admin-layout">
+  <section>
+    <div class="section-header">
+      <h2>Recent activity</h2>
+    </div>
+    {% if recent_activity %}
+      <div class="stack-list">
+        {% for entry in recent_activity %}
+          <div class="mini-card activity-card">
+            <div>
+              <strong>{{ entry['student_name'] }} → {{ entry['tutor_name'] }}</strong>
+              <p>{{ entry['session_date'] }} • {{ entry['status'] }}</p>
+            </div>
+            <span class="badge {{ entry['status'] }}">{{ entry['status'] }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state compact"><p>No recent bookings.</p></div>
+    {% endif %}
+  </section>
+
+  <aside>
+    <div class="section-header">
+      <h2>Pending tutor verifications</h2>
+    </div>
+    {% if pending_tutors %}
+      <div class="stack-list">
+        {% for tutor in pending_tutors %}
+          <div class="mini-card">
+            <div>
+              <strong>{{ tutor['name'] }}</strong>
+              <p>{{ tutor['email'] }}</p>
+            </div>
+            <span class="badge pending">Pending</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state compact"><p>Everything is up to date.</p></div>
+    {% endif %}
+  </aside>
+</div>
+
+<section class="card section-block">
+  <div class="section-header">
+    <h2>Recent users</h2>
+    <a href="{{ url_for('admin') }}" class="text-link">Manage records</a>
+  </div>
+  {% if recent_users %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr>
+        </thead>
+        <tbody>
+          {% for user in recent_users %}
+            <tr>
+              <td>{{ user['name'] }}</td>
+              <td>{{ user['email'] }}</td>
+              <td><span class="badge {{ user['role'] }}">{{ user['role'] }}</span></td>
+              <td>{{ user['created_at'] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty-state compact"><p>No user records available.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

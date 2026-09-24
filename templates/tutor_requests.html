@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Find Tutees | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">TUTOR MODE</span>
+    <h1>Open tutoring requests</h1>
+  </div>
+</div>
+
+{% if requests %}
+  <div class="stack-list">
+    {% for request in requests %}
+      <article class="card">
+        <div class="section-header">
+          <h2>{{ request['topic'] }}</h2>
+          <span class="badge {{ request['status'] }}">{{ request['status'] }}</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              <tr>
+                <th>Subject</th>
+                <td>{{ request['subject_name'] }}</td>
+              </tr>
+              <tr>
+                <th>Tutee</th>
+                <td>{{ request['student_name'] }}</td>
+              </tr>
+              <tr>
+                <th>Preferred date</th>
+                <td>{{ request['preferred_date'] or 'Flexible' }}</td>
+              </tr>
+              <tr>
+                <th>Preferred time</th>
+                <td>{{ request['preferred_time'] or 'Flexible' }}</td>
+              </tr>
+              <tr>
+                <th>Mode</th>
+                <td>{{ request['preferred_mode'] or 'Online' }}</td>
+              </tr>
+              <tr>
+                <th>Budget</th>
+                <td>{% if request['budget'] %}₱{{ '%.2f'|format(request['budget']) }}{% else %}Flexible{% endif %}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="muted space-top">{{ request['description'][:180] }}{% if request['description']|length > 180 %}...{% endif %}</p>
+
+        <div class="card-actions">
+          <a class="btn small" href="{{ url_for('tutor_request_detail', request_id=request['id']) }}">View request</a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <h3>No open tutoring requests yet.</h3>
+    <p>When students submit tutoring requests, they will appear here for Tutor Mode.</p>
+  </div>
+{% endif %}
+{% endblock %}

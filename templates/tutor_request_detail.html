@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Tutoring Request | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <span class="eyebrow">REQUEST DETAIL</span>
+    <h1>{{ request['topic'] }}</h1>
+  </div>
+  <a class="btn secondary" href="{{ url_for('tutor_requests') }}">Back to requests</a>
+</div>
+
+<div class="card">
+  <div class="section-header">
+    <h2>{{ request['subject_name'] }}</h2>
+    <span class="badge {{ request['status'] }}">{{ request['status'] }}</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr>
+          <th>Tutee</th>
+          <td>{{ request['student_name'] }}</td>
+        </tr>
+        <tr>
+          <th>Preferred date</th>
+          <td>{{ request['preferred_date'] or 'Flexible' }}</td>
+        </tr>
+        <tr>
+          <th>Preferred time</th>
+          <td>{{ request['preferred_time'] or 'Flexible' }}</td>
+        </tr>
+        <tr>
+          <th>Preferred mode</th>
+          <td>{{ request['preferred_mode'] or 'Online' }}</td>
+        </tr>
+        <tr>
+          <th>Budget</th>
+          <td>{% if request['budget'] %}₱{{ '%.2f'|format(request['budget']) }}{% else %}Flexible{% endif %}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="space-top">
+    <h3>Description</h3>
+    <p class="muted">{{ request['description'] }}</p>
+  </div>
+
+  <div class="space-top">
+    <h3>Express interest</h3>
+    <form method="post" action="{{ url_for('tutor_request_offer', request_id=request['id']) }}">
+      <div class="field-group">
+        <label for="message">Message to the tutee</label>
+        <textarea id="message" name="message" rows="4" placeholder="I can help with this topic and am available on the requested schedule."></textarea>
+      </div>
+      <div class="card-actions space-top">
+        <button type="submit" class="btn">Express interest</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if offers %}
+  <div class="space-top">
+    <h2>Current interest</h2>
+    <div class="stack-list">
+      {% for offer in offers %}
+        <div class="card">
+          <div class="section-header">
+            <strong>{{ offer['tutor_name'] }}</strong>
+            <span class="badge {{ offer['status'] }}">{{ offer['status'] }}</span>
+          </div>
+          <p class="muted">{{ offer['message'] or 'No message provided.' }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
