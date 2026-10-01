@@ -319,6 +319,8 @@ def migrate_db_schema():
         db.execute("ALTER TABLE tutor_profiles ADD COLUMN bank_account_name TEXT DEFAULT ''")
     if not column_exists(db, "tutor_profiles", "bank_account_number"):
         db.execute("ALTER TABLE tutor_profiles ADD COLUMN bank_account_number TEXT DEFAULT ''")
+    if not column_exists(db, "tutor_profiles", "bank_qr_code"):
+        db.execute("ALTER TABLE tutor_profiles ADD COLUMN bank_qr_code TEXT DEFAULT ''")
     if not column_exists(db, "bookings", "payment_receipt"):
         db.execute("ALTER TABLE bookings ADD COLUMN payment_receipt TEXT DEFAULT ''")
     if not column_exists(db, "bookings", "cancellation_reason"):
@@ -335,6 +337,16 @@ def migrate_db_schema():
         db.execute("ALTER TABLE bookings ADD COLUMN ticket_code TEXT DEFAULT ''")
     if not column_exists(db, "bookings", "total_fee"):
         db.execute("ALTER TABLE bookings ADD COLUMN total_fee REAL NOT NULL DEFAULT 0")
+    if not column_exists(db, "bookings", "payment_qr_code"):
+        db.execute("ALTER TABLE bookings ADD COLUMN payment_qr_code TEXT DEFAULT ''")
+    # Preserve the tutor's current QR code for existing bookings so their tickets remain usable.
+    db.execute("""
+        UPDATE bookings
+        SET payment_qr_code = COALESCE((
+            SELECT tp.bank_qr_code FROM tutor_profiles tp WHERE tp.id = bookings.tutor_id
+        ), '')
+        WHERE COALESCE(payment_qr_code, '') = ''
+    """)
 
     db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_ticket_code ON bookings(ticket_code) WHERE ticket_code IS NOT NULL AND ticket_code != ''")
     db.execute("""CREATE TABLE IF NOT EXISTS booking_reports (
@@ -1411,31 +1423,30 @@ def tutor_profile():
         bank_account_name = request.form.get("bank_account_name", "").strip()
         bank_account_number = request.form.get("bank_account_number", "").strip()
 
-        profile_picture = request.files.get("profile_picture")
-        if profile_picture and profile_picture.filename:
-            original = secure_filename(profile_picture.filename)
+        bank_qr_code = (profile["bank_qr_code"] or "").strip() if "bank_qr_code" in profile.keys() else ""
+        qr_file = request.files.get("bank_qr_code")
+        if qr_file and qr_file.filename:
+            original = secure_filename(qr_file.filename)
             ext = original.rsplit(".", 1)[1].lower() if "." in original else ""
             if ext not in {"png", "jpg", "jpeg", "webp"}:
-                flash("Profile picture must be PNG, JPG, JPEG, or WEBP.", "danger")
+                flash("Bank QR Code must be PNG, JPG, JPEG, or WEBP.", "danger")
                 return redirect(url_for("tutor_profile"))
-            profile_picture.stream.seek(0, os.SEEK_END)
-            size = profile_picture.stream.tell()
-            profile_picture.stream.seek(0)
+            qr_file.stream.seek(0, os.SEEK_END)
+            size = qr_file.stream.tell()
+            qr_file.stream.seek(0)
             if size > 2 * 1024 * 1024:
-                flash("Profile picture must be 2MB or smaller.", "danger")
+                flash("Bank QR Code must be 2MB or smaller.", "danger")
                 return redirect(url_for("tutor_profile"))
-            upload_dir = os.path.join(BASE_DIR, "static", "uploads")
+            upload_dir = os.path.join(BASE_DIR, "static", "uploads", "payment_qr")
             os.makedirs(upload_dir, exist_ok=True)
-            unique_name = f"{uuid4().hex}.{ext}"
-            profile_picture.save(os.path.join(upload_dir, unique_name))
-            old_picture = (g.user["profile_picture"] if "profile_picture" in g.user.keys() else "") or ""
-            if old_picture:
-                old_path = os.path.join(upload_dir, old_picture)
+            unique_name = f"qr_{g.user['id']}_{uuid4().hex}.{ext}"
+            qr_file.save(os.path.join(upload_dir, unique_name))
+            if bank_qr_code:
+                old_path = os.path.join(upload_dir, bank_qr_code)
                 if os.path.exists(old_path):
                     try: os.remove(old_path)
                     except OSError: pass
-            db.execute("UPDATE users SET profile_picture=? WHERE id=?", (unique_name, g.user["id"]))
-            g.user = db.execute("SELECT * FROM users WHERE id=?", (g.user["id"],)).fetchone()
+            bank_qr_code = unique_name
 
         selected_subjects = list(dict.fromkeys(request.form.getlist("subjects")))
         if not selected_subjects:
@@ -1443,8 +1454,8 @@ def tutor_profile():
             return redirect(url_for("tutor_profile"))
 
         db.execute(
-            "UPDATE tutor_profiles SET bio=?, qualifications=?, experience=?, hourly_rate=?, bank_name=?, bank_account_name=?, bank_account_number=? WHERE id=?",
-            (bio, qualifications, experience, rate, bank_name, bank_account_name, bank_account_number, profile["id"]),
+            "UPDATE tutor_profiles SET bio=?, qualifications=?, experience=?, hourly_rate=?, bank_name=?, bank_account_name=?, bank_account_number=?, bank_qr_code=? WHERE id=?",
+            (bio, qualifications, experience, rate, bank_name, bank_account_name, bank_account_number, bank_qr_code, profile["id"]),
         )
         db.execute("DELETE FROM tutor_subjects WHERE tutor_id=?", (profile["id"],))
         for sid in selected_subjects:
@@ -1586,10 +1597,10 @@ def book(tutor_id):
         total_fee = round(expected_fee, 2)
         cursor = db.execute(
             """INSERT INTO bookings
-            (student_id,tutor_id,subject_id,session_date,start_time,end_time,request_note,status,payment_status,created_at,ticket_code,total_fee)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (student_id,tutor_id,subject_id,session_date,start_time,end_time,request_note,status,payment_status,created_at,ticket_code,total_fee,payment_qr_code)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (g.user["id"], tutor_id, subject_id, date, start, end, note, "pending",
-             payment_status, created_at, "", total_fee)
+             payment_status, created_at, "", total_fee, tutor["bank_qr_code"] or "")
         )
         booking_id = cursor.lastrowid
         ticket_code = f"TM-{date[:4]}-{booking_id:06d}"
@@ -1720,7 +1731,8 @@ def booking_ticket(booking_id):
     booking = db.execute("""
         SELECT b.*, su.name AS student_name, su.id AS student_user_id,
                tu.name AS tutor_name, tu.id AS tutor_user_id, tp.hourly_rate,
-               tp.bank_name, tp.bank_account_name, tp.bank_account_number, tu.profile_picture AS tutor_profile_picture,
+               tp.bank_name, tp.bank_account_name, tp.bank_account_number,
+               COALESCE(b.payment_qr_code, tp.bank_qr_code, '') AS payment_qr_code,
                s.name AS subject_name
         FROM bookings b
         JOIN users su ON su.id=b.student_id

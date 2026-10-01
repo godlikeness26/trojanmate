@@ -43,14 +43,20 @@
   <div class="payment-instructions">
     <h3>Payment Details</h3>
     <p>Send the session payment of <strong>₱{{ '%.2f'|format(booking['total_fee'] or 0) }}</strong> to the tutor using the account below, then click <strong>Payment Sent</strong>.</p>
-    {% if booking['bank_account_number'] %}
+    <div class="ticket-payment-layout">
+      {% if booking['payment_qr_code'] %}
+        <div class="ticket-qr-wrap">
+          <img class="ticket-payment-qr" src="{{ url_for('static', filename='uploads/payment_qr/' ~ booking['payment_qr_code']) }}" alt="Bank QR Code for Payment">
+        </div>
+      {% endif %}
       <div class="bank-details">
-        <div><span>Bank / Payment Institution</span><strong>{{ booking['bank_name'] or 'Not specified' }}</strong></div>
+        <div><span>Payment Method</span><strong>{{ booking['bank_name'] or 'Not specified' }}</strong></div>
         <div><span>Account Name</span><strong>{{ booking['bank_account_name'] or 'Not specified' }}</strong></div>
-        <div><span>Account Number</span><strong>{{ booking['bank_account_number'] }}</strong></div>
+        <div><span>Account Number</span><strong>{{ booking['bank_account_number'] or 'Not specified' }}</strong></div>
       </div>
-    {% else %}
-      <p class="muted">The tutor has not provided an account number yet. Please message the tutor before sending payment.</p>
+    </div>
+    {% if not booking['payment_qr_code'] and not booking['bank_account_number'] %}
+      <p class="muted">The tutor has not provided payment details yet. Please message the tutor before sending payment.</p>
     {% endif %}
   </div>
   {% endif %}

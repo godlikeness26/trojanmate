@@ -1157,10 +1157,19 @@ kbd{background:#f0f2f5;border:1px solid #d6d9dd;border-radius:3px;padding:1px 4p
 .bank-details{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .bank-details>div{padding:12px;background:#fff;border:1px solid #ddd;border-radius:8px}.bank-details span{display:block;font-size:10px;text-transform:uppercase;color:#777;margin-bottom:4px}.bank-details strong{word-break:break-word}
 .profile-payment-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.profile-photo-large{width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid #e50914}
+ .profile-photo-large{width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid #e50914}
+.qr-payment-upload{min-width:0}
+.qr-upload-help{margin-top:10px;padding:10px;border:1px solid #ddd;border-radius:8px;background:#fafafa}
+.payment-qr-preview{display:block;width:240px;max-width:100%;aspect-ratio:1/1;object-fit:contain;background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px;box-sizing:border-box}
+.payment-qr-placeholder{display:flex;align-items:center;justify-content:center;width:240px;max-width:100%;aspect-ratio:1/1;background:#fff;border:1px dashed #bbb;border-radius:8px;color:#777;font-size:13px}
+.qr-upload-help small{display:block;margin-top:8px;color:#777}
+.ticket-payment-layout{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:16px;align-items:start;margin-top:14px}
+.ticket-qr-wrap{padding:10px;background:#fff;border:1px solid #ddd;border-radius:8px;text-align:center}
+.ticket-payment-qr{display:block;width:100%;max-width:240px;aspect-ratio:1/1;object-fit:contain;margin:auto}
+.ticket-payment-layout .bank-details{margin-top:0;grid-template-columns:1fr}
 .cancellation-note{background:#fff1f1;border-left:4px solid #e50914;padding:10px 12px;border-radius:5px}
 .receipt-note a{color:#d71920;font-weight:800}
-@media(max-width:700px){.bank-details,.profile-payment-grid{grid-template-columns:1fr}.payment-send-form{align-items:stretch;flex-direction:column}.file-label input[type=file]{max-width:100%}}
+@media(max-width:700px){.bank-details,.profile-payment-grid,.ticket-payment-layout{grid-template-columns:1fr}.payment-send-form{align-items:stretch;flex-direction:column}.file-label input[type=file]{max-width:100%}}
 
 /* Tutor discovery: minimum rating slider */
 .rating-filter-group { min-width: 0; }

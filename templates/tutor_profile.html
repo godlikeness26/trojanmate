@@ -10,15 +10,26 @@
 <label>Hourly Rate (₱)<input type="number" step="0.01" min="0" name="hourly_rate" value="{{ profile['hourly_rate'] }}"></label>
 <h2>Profile & Payment Information</h2>
 <div class="profile-payment-grid">
-  <div>
-    <label>Profile Image<input type="file" name="profile_picture" accept="image/png,image/jpeg,image/webp"></label>
-    {% if current_user['profile_picture'] %}<p class="muted">A profile image is already uploaded. Upload another image to replace it.</p>{% endif %}
+  <div class="qr-payment-upload">
+    <label>Bank QR Code for Payment
+      <input type="file" name="bank_qr_code" accept="image/png,image/jpeg,image/webp">
+    </label>
+    <div class="qr-upload-help">
+      {% if profile['bank_qr_code'] %}
+        <img class="payment-qr-preview" src="{{ url_for('static', filename='uploads/payment_qr/' ~ profile['bank_qr_code']) }}" alt="Bank QR Code for Payment">
+        <p class="muted">Your current QR code. Upload a new image to replace it.</p>
+      {% else %}
+        <div class="payment-qr-placeholder">No QR code uploaded</div>
+        <p class="muted">Upload your bank or e-wallet QR code for easy payments.</p>
+      {% endif %}
+      <small>Accepted formats: JPG, PNG, WEBP (Max 2 MB)</small>
+    </div>
   </div>
   <div>
     <label>Bank / Payment Institution<input type="text" name="bank_name" value="{{ profile['bank_name'] or '' }}" placeholder="e.g., BDO, BPI, GCash"></label>
     <label>Account Name<input type="text" name="bank_account_name" value="{{ profile['bank_account_name'] or '' }}"></label>
     <label>Account Number<input type="text" name="bank_account_number" value="{{ profile['bank_account_number'] or '' }}"></label>
-    <p class="muted">These payment details are shown to students with confirmed bookings so they know where to send the session payment.</p>
+    <p class="muted">These payment details and the QR code are shown to students with confirmed bookings so they know where to send the session payment.</p>
   </div>
 </div>
 <h2>Subjects / Services</h2>
