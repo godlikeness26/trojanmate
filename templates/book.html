@@ -30,8 +30,17 @@
       <div class="field-group">
         <label for="subject_id">Subject</label>
         <select id="subject_id" name="subject_id" required>
-          {% for s in subjects %}
-            <option value="{{ s['id'] }}">{{ s['name'] }}</option>
+          <optgroup label="Common Courses">
+            {% for s in subjects if s['program'] == 'BSCpE, BSIE' %}
+              <option value="{{ s['id'] }}">{{ s['code'] }} — {{ s['name'].split(' — ', 1)[1] if ' — ' in s['name'] else s['name'] }}</option>
+            {% endfor %}
+          </optgroup>
+          {% for program in ["BSCpE", "BSIE"] %}
+            <optgroup label="{{ program }}">
+              {% for s in subjects if s['program'] == program %}
+                <option value="{{ s['id'] }}">{{ s['code'] }} — {{ s['name'].split(' — ', 1)[1] if ' — ' in s['name'] else s['name'] }}</option>
+              {% endfor %}
+            </optgroup>
           {% endfor %}
         </select>
       </div>

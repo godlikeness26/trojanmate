@@ -57,7 +57,7 @@
           {% endif %}
         </a>
         {% if current_user['role'] != 'admin' %}
-          <a href="{{ url_for('tutor_profile') if user_is_tutor(current_user) else url_for('dashboard') }}">Profile</a>
+          <a href="{{ url_for('tutor_profile') if mode == 'tutor' and user_can_use_tutor_mode(current_user) else url_for('user_profile', user_id=current_user['id']) }}">Profile</a>
         {% endif %}
         <a href="{{ url_for('logout') }}">Logout</a>
       {% else %}

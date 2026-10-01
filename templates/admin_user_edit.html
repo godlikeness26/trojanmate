@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Edit User | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><span class="eyebrow">ADMIN</span><h1>Edit User Account</h1></div>
+  <a class="btn secondary" href="{{ url_for('admin') }}">Back to Admin</a>
+</div>
+
+<div class="card admin-edit-card">
+  <p class="muted">Update the user's account information. Leave the password field blank if the current password should remain unchanged.</p>
+  <form method="post">
+    <label>Full Name
+      <input type="text" name="name" value="{{ user['name'] }}" required>
+    </label>
+    <label>Email Address
+      <input type="email" name="email" value="{{ user['email'] }}" required>
+    </label>
+    <label>New Password
+      <input type="password" name="new_password" minlength="8" autocomplete="new-password" placeholder="Leave blank to keep current password">
+    </label>
+    <div class="admin-account-meta">
+      <span><b>Role:</b> {{ user['role']|capitalize }}</span>
+      <span><b>Created:</b> {{ user['created_at'] }}</span>
+    </div>
+    <div class="form-actions">
+      <button class="btn" type="submit">Save Changes</button>
+      <a class="btn secondary" href="{{ url_for('admin') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

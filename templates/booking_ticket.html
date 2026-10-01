@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}{{ booking['ticket_code'] }} | TrojanMate{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><span class="eyebrow">BOOKING TICKET</span><h1>{{ booking['ticket_code'] }}</h1><p class="muted">Keep this ticket number for your tutoring session and any payment or dispute concern.</p></div>
+  <a class="btn secondary" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+</div>
+
+<section class="ticket-shell">
+  <div class="ticket-header">
+    <div>
+      <span class="ticket-label">TROJANMATE TICKETING</span>
+      <h2>{{ booking['ticket_code'] }}</h2>
+    </div>
+    <div class="ticket-statuses">
+      <span class="badge {{ booking['status'] }}">{{ booking['status']|title }}</span>
+      {% if booking['payment_status'] == 'paid' %}
+        <span class="payment-badge paid">Payment Confirmed</span>
+      {% elif booking['payment_status'] == 'pending' %}
+        <span class="payment-badge pending">Payment Awaiting Tutor Confirmation</span>
+      {% elif booking['payment_status'] == 'unpaid' %}
+        <span class="payment-badge unpaid">Unpaid</span>
+      {% else %}
+        <span class="payment-badge na">No Payment Required</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="ticket-grid">
+    <div class="ticket-detail"><span>Student</span><strong>{{ booking['student_name'] }}</strong></div>
+    <div class="ticket-detail"><span>Tutor</span><strong>{{ booking['tutor_name'] }}</strong></div>
+    <div class="ticket-detail"><span>Subject</span><strong>{{ booking['subject_name'] }}</strong></div>
+    <div class="ticket-detail"><span>Date</span><strong>{{ booking['session_date'] }}</strong></div>
+    <div class="ticket-detail"><span>Time</span><strong>{{ booking['start_time'] }}–{{ booking['end_time'] }}</strong></div>
+    <div class="ticket-detail"><span>Session Fee</span><strong>₱{{ '%.2f'|format(booking['total_fee'] or 0) }}</strong></div>
+  </div>
+
+  {% if booking['request_note'] %}
+  <div class="ticket-note"><strong>Student's request note</strong><p>{{ booking['request_note'] }}</p></div>
+  {% endif %}
+
+  {% if booking['total_fee'] > 0 and booking['status'] in ['confirmed','completed'] and g.user['id'] == booking['student_user_id'] and booking['status'] == 'confirmed' %}
+  <div class="payment-instructions">
+    <h3>Payment Details</h3>
+    <p>Send the session payment of <strong>₱{{ '%.2f'|format(booking['total_fee'] or 0) }}</strong> to the tutor using the account below, then click <strong>Payment Sent</strong>.</p>
+    {% if booking['bank_account_number'] %}
+      <div class="bank-details">
+        <div><span>Bank / Payment Institution</span><strong>{{ booking['bank_name'] or 'Not specified' }}</strong></div>
+        <div><span>Account Name</span><strong>{{ booking['bank_account_name'] or 'Not specified' }}</strong></div>
+        <div><span>Account Number</span><strong>{{ booking['bank_account_number'] }}</strong></div>
+      </div>
+    {% else %}
+      <p class="muted">The tutor has not provided an account number yet. Please message the tutor before sending payment.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if booking['payment_receipt'] %}
+    <div class="ticket-note receipt-note"><strong>Payment receipt</strong><p>Receipt image submitted by the student.</p><a href="{{ url_for('static', filename='uploads/receipts/' ~ booking['payment_receipt']) }}" target="_blank" rel="noopener">View receipt image</a></div>
+  {% endif %}
+
+  {% if booking['cancellation_reason'] %}
+    <div class="ticket-note cancellation-note"><strong>Cancellation reason</strong><p>{{ booking['cancellation_reason'] }}</p></div>
+  {% endif %}
+
+  <div class="ticket-actions">
+    {% if g.user['id'] == booking['student_user_id'] and booking['payment_status'] == 'unpaid' and booking['status'] == 'confirmed' and booking['total_fee'] > 0 %}
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('payment_mark_paid', booking_id=booking['id']) }}" onsubmit="return confirm('Confirm that you have sent ₱{{ '%.2f'|format(booking['total_fee']) }} for this ticket?');" class="payment-send-form">
+        <label class="file-label">Receipt image (optional)
+          <input type="file" name="payment_receipt" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <button class="btn" type="submit">Payment Sent</button>
+      </form>
+    {% elif g.user['id'] == booking['student_user_id'] and booking['payment_status'] == 'pending' %}
+      <span class="payment-badge pending">Payment sent — awaiting tutor confirmation</span>
+    {% endif %}
+    {% if g.user['id'] == booking['tutor_user_id'] and booking['payment_status'] == 'pending' %}
+      <form method="post" action="{{ url_for('payment_confirm', booking_id=booking['id']) }}" onsubmit="return confirm('Confirm that you received the payment for this ticket?');">
+        <button class="btn" type="submit">Confirm Payment Received</button>
+      </form>
+    {% endif %}
+    {% if g.user['id'] == booking['student_user_id'] and booking['status'] in ['pending','confirmed'] %}
+      <button class="btn danger" type="button" onclick="document.getElementById('studentCancelBox').hidden=false">Cancel Booking</button>
+    {% endif %}
+    {% if g.user['id'] == booking['tutor_user_id'] and booking['status'] == 'confirmed' %}
+      {% if booking['payment_status'] in ['paid','not_applicable'] %}
+        <form method="post" action="{{ url_for('booking_status', booking_id=booking['id']) }}" onsubmit="return confirm('Mark this session as completed?');"><input type="hidden" name="status" value="completed"><button class="btn" type="submit">Mark as Completed</button></form>
+      {% else %}
+        <span class="muted">Payment must be confirmed before completion.</span>
+      {% endif %}
+      <button class="btn danger" type="button" onclick="document.getElementById('cancelBox').hidden=false">Cancel Booking</button>
+    {% endif %}
+    {% if g.user['role'] != 'admin' %}
+      <button class="btn danger" type="button" onclick="document.getElementById('reportBox').hidden=false">Report an Issue</button>
+    {% endif %}
+  </div>
+
+  {% if g.user['id'] == booking['student_user_id'] and booking['status'] in ['pending','confirmed'] %}
+  <div id="studentCancelBox" class="report-box" hidden>
+    <h3>Cancel booking</h3>
+    <form method="post" action="{{ url_for('cancel_booking_by_student', booking_id=booking['id']) }}">
+      <label>Reason for cancellation
+        <textarea name="cancellation_reason" rows="4" maxlength="1000" required placeholder="Explain why you need to cancel this booking."></textarea>
+      </label>
+      <div class="form-actions"><button class="btn danger" type="submit">Confirm Cancellation</button><button class="btn secondary" type="button" onclick="document.getElementById('studentCancelBox').hidden=true">Keep Booking</button></div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if g.user['id'] == booking['tutor_user_id'] and booking['status'] == 'confirmed' %}
+  <div id="cancelBox" class="report-box" hidden>
+    <h3>Cancel booking</h3>
+    <form method="post" action="{{ url_for('cancel_booking', booking_id=booking['id']) }}">
+      <label>Reason for cancellation
+        <textarea name="cancellation_reason" rows="4" maxlength="1000" required placeholder="Explain why you need to cancel this booking."></textarea>
+      </label>
+      <div class="form-actions"><button class="btn danger" type="submit">Confirm Cancellation</button><button class="btn secondary" type="button" onclick="document.getElementById('cancelBox').hidden=true">Keep Booking</button></div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if g.user['role'] != 'admin' %}
+  <div id="reportBox" class="report-box" hidden>
+    <h3>Report a booking issue</h3>
+    <p class="muted">Use this if there is a payment dispute, no-show, cancellation problem, inappropriate behavior, or another issue. An administrator will be notified.</p>
+    <form method="post" action="{{ url_for('report_booking', booking_id=booking['id']) }}">
+      <label>Reason
+        <select name="reason" required>
+          <option value="">Select a reason</option>
+          <option>Payment dispute</option>
+          <option>Booking or cancellation issue</option>
+          <option>No-show</option>
+          <option>Inappropriate behavior</option>
+          <option>Service/session issue</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>Details
+        <textarea name="description" maxlength="2000" rows="4" placeholder="Explain what happened and include relevant details."></textarea>
+      </label>
+      <div class="form-actions"><button class="btn danger" type="submit">Submit Report</button><button class="btn secondary" type="button" onclick="document.getElementById('reportBox').hidden=true">Cancel</button></div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if g.user['role'] == 'admin' %}
+  <div class="ticket-admin-reports">
+    <h3>Reports for this ticket</h3>
+    {% if reports %}
+      {% for r in reports %}
+      <article class="report-card">
+        <div><strong>{{ r['reason'] }}</strong><span class="report-status {{ r['status'] }}">{{ r['status']|title }}</span></div>
+        <p><b>Reported by:</b> {{ r['reporter_name'] }}</p>
+        <p>{{ r['description'] or 'No additional details.' }}</p>
+        <small>{{ r['created_at'] }}</small>
+      </article>
+      {% endfor %}
+    {% else %}<p class="muted">No reports have been filed for this ticket.</p>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

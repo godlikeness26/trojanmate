@@ -1,67 +1,295 @@
 {% extends "base.html" %}
-{% block title %}{% if thread_user %}Messages with {{ thread_user['name'] }}{% else %}Messages{% endif %} | TrojanMate{% endblock %}
+{% block title %}{% if thread_user %}{{ thread_user['name'] }} · Messages{% else %}Messages{% endif %} | TrojanMate{% endblock %}
 {% block content %}
-<div class="pagehead">
-  <div>
-    <span class="eyebrow">MESSAGING</span>
-    <h1>Messages</h1>
-  </div>
-  <a class="btn secondary" href="{{ url_for('dashboard') }}">Back to dashboard</a>
-</div>
-
-<div class="message-layout">
-  <aside class="sidebar-panel">
-    <div class="section-header">
-      <h2>Conversations</h2>
+<div class="messenger-shell">
+  <aside class="messenger-sidebar">
+    <div class="messenger-sidebar-top">
+      <div>
+        <span class="eyebrow">MESSAGING</span>
+        <h1>Messages</h1>
+      </div>
+      <button class="messenger-compose-btn" type="button" id="composeToggle" title="New message" aria-label="New message" aria-expanded="false">＋</button>
     </div>
-    {% if conversations %}
-      <div class="conversation-list">
-        {% for conv in conversations %}
-          <a class="conversation-item" href="{{ url_for('message_thread', other_id=conv['id']) }}">
-            <div>
-              <strong>{{ conv['name'] }}</strong><br>
-              <span>{{ conv['role']|title }}</span>
-            </div>
-            {% if conv['unread_count'] %}
-              <span class="badge pending">{{ conv['unread_count'] }}</span>
+
+    <div class="messenger-search">
+      <span>⌕</span>
+      <input id="conversationSearch" type="search" placeholder="Search Messenger" autocomplete="off">
+    </div>
+
+    <div class="messenger-new" id="newConversation" hidden>
+      <label for="message_to">New message</label>
+      <div class="messenger-new-row">
+        <select id="message_to" name="to">
+          <option value="">Choose a person...</option>
+          {% set role_order = ['tutor', 'student', 'admin'] %}
+          {% for role_name in role_order %}
+            {% set ns = namespace(has_role=false) %}
+            {% for contact in contacts %}
+              {% if (contact['role'] or 'student')|lower == role_name %}{% set ns.has_role = true %}{% endif %}
+            {% endfor %}
+            {% if ns.has_role %}
+              <optgroup label="{{ role_name|title }}">
+                {% for contact in contacts %}
+                  {% if (contact['role'] or 'student')|lower == role_name %}
+                    <option value="{{ contact['id'] }}">{{ contact['name'] }}</option>
+                  {% endif %}
+                {% endfor %}
+              </optgroup>
             {% endif %}
-          </a>
-        {% endfor %}
+          {% endfor %}
+        </select>
       </div>
-    {% else %}
-      <div class="empty-state compact">
-        <p>No conversations yet.</p>
-      </div>
-    {% endif %}
+    </div>
+
+    <div class="messenger-tabs">
+      <button class="messenger-tab active" type="button">Chats</button>
+    </div>
+
+    <div class="messenger-conversations" id="conversationList">
+      {% for conv in conversations %}
+        <a class="messenger-conversation {% if thread_user and conv['id'] == thread_user['id'] %}active{% endif %}" data-name="{{ conv['name']|lower }}" href="{{ url_for('message_thread', other_id=conv['id']) }}">
+          <div class="avatar avatar-sm">{{ conv['name'][:1]|upper }}</div>
+          <div class="conversation-copy">
+            <div class="conversation-line">
+              <strong>{{ conv['name'] }}</strong>
+              {% if conv['last_message'] %}<small>{{ conv['last_message_at'] or '' }}</small>{% endif %}
+            </div>
+            <div class="conversation-preview">
+              <span>{{ conv['last_message']|truncate(48, True) }}</span>
+              {% if conv['unread_count'] %}<b class="unread-count">{{ conv['unread_count'] }}</b>{% endif %}
+            </div>
+          </div>
+        </a>
+      {% else %}
+        <div class="messenger-empty-list">
+          <div class="avatar avatar-empty">✉</div>
+          <strong>No conversations yet</strong>
+          <span>Start a new chat above.</span>
+        </div>
+      {% endfor %}
+    </div>
   </aside>
 
-  <section class="thread-panel">
+  <section class="messenger-thread {% if not thread_user %}no-thread{% endif %}">
     {% if thread_user %}
-      <div class="section-header">
-        <h2>{{ thread_user['name'] }}</h2>
-      </div>
-
-      <div class="thread-list">
-        {% for msg in messages %}
-          <div class="message-bubble {% if msg['sender_id'] == current_user['id'] %}me{% endif %}">
-            <strong>{% if msg['sender_id'] == current_user['id'] %}You{% else %}{{ msg['sender_name'] }}{% endif %}</strong>
-            <p>{{ msg['body'] }}</p>
-            <small>{{ msg['created_at'] }}</small>
+      <header class="messenger-thread-header">
+        <div class="messenger-person">
+          <div class="avatar avatar-md">{{ thread_user['name'][:1]|upper }}</div>
+          <div>
+            <h2>{{ thread_user['name'] }}</h2>
+            <span>{{ thread_user['role']|title }}</span>
           </div>
-        {% endfor %}
-      </div>
+        </div>
+        <a class="thread-info" href="{{ url_for('user_profile', user_id=thread_user['id']) }}" title="View profile" aria-label="View {{ thread_user['name'] }} profile">ⓘ</a>
+      </header>
 
-      <form method="post" class="message-form">
+      <main class="messenger-messages" id="threadList" data-other-id="{{ thread_user['id'] }}" data-current-id="{{ current_user['id'] }}">
+        <div class="thread-intro">
+          <div class="avatar avatar-lg">{{ thread_user['name'][:1]|upper }}</div>
+          <h3>{{ thread_user['name'] }}</h3>
+          <p>{{ thread_user['role']|title }} · TrojanMate</p>
+        </div>
+        {% for msg in messages %}
+          <div class="chat-row {% if msg['sender_id'] == current_user['id'] %}outgoing{% else %}incoming{% endif %}" data-message-id="{{ msg['id'] }}">
+            {% if msg['sender_id'] != current_user['id'] %}<div class="avatar avatar-xs">{{ msg['sender_name'][:1]|upper }}</div>{% endif %}
+            <div class="chat-content">
+              <div class="chat-bubble">{{ msg['body'] }}</div>
+              <div class="chat-time">{{ msg['created_at'] }}</div>
+            </div>
+          </div>
+        {% else %}
+          <div class="first-message"><strong>Say hello 👋</strong><span>Start the conversation with {{ thread_user['name'] }}.</span></div>
+        {% endfor %}
+      </main>
+
+      <form method="post" action="{{ url_for('messages') }}" class="messenger-composer" id="messageForm">
         <input type="hidden" name="receiver_id" value="{{ thread_user['id'] }}">
-        <textarea name="body" rows="3" placeholder="Write a message..." required></textarea>
-        <button class="btn" type="submit">Send message</button>
+        <button class="composer-icon" type="button" title="Add attachment" disabled>＋</button>
+        <div class="composer-input-wrap">
+          <textarea id="message_body" name="body" rows="1" maxlength="2000" placeholder="Aa" autocomplete="off" required></textarea>
+          <span class="char-counter" id="charCounter">0/2000</span>
+        </div>
+        <button class="send-button" type="submit" title="Send message" aria-label="Send message">➤</button>
       </form>
+      <div class="composer-hint">Press <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</div>
     {% else %}
-      <div class="empty-state">
-        <h3>Select a conversation</h3>
-        <p>Open a message thread to chat with a student, tutor, or administrator.</p>
+      <div class="messenger-welcome">
+        <div class="welcome-icon">✉</div>
+        <h2>Your Messages</h2>
+        <p>Select a conversation or start a new one to chat with a student, tutor, or administrator.</p>
+        <button class="btn" type="button" id="welcomeCompose">New message</button>
       </div>
     {% endif %}
   </section>
 </div>
+
+<script>
+(() => {
+  const search = document.getElementById('conversationSearch');
+  const list = document.getElementById('conversationList');
+  if (search && list) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      list.querySelectorAll('.messenger-conversation').forEach(item => {
+        item.style.display = !q || (item.dataset.name || '').includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  const selector = document.getElementById('message_to');
+  const composeToggle = document.getElementById('composeToggle');
+  const newConversation = document.getElementById('newConversation');
+  const welcomeCompose = document.getElementById('welcomeCompose');
+
+  function toggleComposer(force) {
+    if (!newConversation) return;
+    const shouldOpen = typeof force === 'boolean' ? force : newConversation.hidden;
+    newConversation.hidden = !shouldOpen;
+    if (composeToggle) {
+      composeToggle.setAttribute('aria-expanded', String(shouldOpen));
+      composeToggle.classList.toggle('is-open', shouldOpen);
+    }
+    if (shouldOpen && selector) selector.focus();
+  }
+
+  if (composeToggle) composeToggle.addEventListener('click', () => toggleComposer());
+  if (welcomeCompose) welcomeCompose.addEventListener('click', () => toggleComposer(true));
+  if (selector) {
+    selector.addEventListener('change', () => {
+      if (selector.value) window.location.href = `/messages/${selector.value}`;
+    });
+  }
+
+  const textarea = document.getElementById('message_body');
+  const counter = document.getElementById('charCounter');
+  const form = document.getElementById('messageForm');
+  const thread = document.getElementById('threadList');
+  const sendButton = document.querySelector('.send-button');
+
+  function updateComposer() {
+    if (!textarea) return;
+    counter.textContent = `${textarea.value.length}/2000`;
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 140) + 'px';
+    if (sendButton) sendButton.disabled = !textarea.value.trim();
+  }
+
+  function scrollToBottom() {
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+
+  function renderConversationList(conversations) {
+    if (!list) return;
+    const query = (search?.value || '').trim().toLowerCase();
+    const activeId = thread ? Number(thread.dataset.otherId) : null;
+    if (!conversations.length) {
+      list.innerHTML = `<div class="messenger-empty-list"><div class="avatar avatar-empty">✉</div><strong>No conversations yet</strong><span>Start a new chat above.</span></div>`;
+      return;
+    }
+
+    list.innerHTML = conversations.map(conv => {
+      const name = escapeHtml(conv.name || 'Unknown user');
+      const role = escapeHtml((conv.role || '').replace(/^./, c => c.toUpperCase()));
+      const preview = conv.last_message ? escapeHtml(conv.last_message.length > 48 ? conv.last_message.slice(0, 48) + '…' : conv.last_message) : 'No messages yet';
+      const time = escapeHtml(conv.last_message_at || '');
+      const unread = Number(conv.unread_count || 0);
+      const active = activeId === Number(conv.id) ? ' active' : '';
+      const hidden = query && !(String(conv.name || '').toLowerCase().includes(query)) ? ' style="display:none"' : '';
+      return `<a class="messenger-conversation${active}" data-name="${escapeHtml(String(conv.name || '').toLowerCase())}" href="/messages/${Number(conv.id)}"${hidden}>
+        <div class="avatar avatar-sm">${escapeHtml(String(conv.name || '?').slice(0,1).toUpperCase())}</div>
+        <div class="conversation-copy">
+          <div class="conversation-line"><strong>${name}</strong><small>${time}</small></div>
+          <div class="conversation-preview"><span>${preview}</span>${unread ? `<b class="unread-count">${unread > 99 ? '99+' : unread}</b>` : ''}</div>
+        </div>
+      </a>`;
+    }).join('');
+  }
+
+  async function refreshConversationList() {
+    if (!list) return;
+    try {
+      const res = await fetch('/messages?format=json', {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+      if (!res.ok) return;
+      const data = await res.json();
+      renderConversationList(data.conversations || []);
+    } catch (_) {}
+  }
+
+  function addMessage(msg, currentId) {
+    if (!thread || thread.querySelector(`[data-message-id="${msg.id}"]`)) return;
+    const row = document.createElement('div');
+    row.className = 'chat-row ' + (msg.sender_id === currentId ? 'outgoing' : 'incoming');
+    row.dataset.messageId = msg.id;
+    if (msg.sender_id !== currentId) {
+      const av = document.createElement('div'); av.className = 'avatar avatar-xs'; av.textContent = (msg.sender_name || '?').slice(0,1).toUpperCase(); row.appendChild(av);
+    }
+    const content = document.createElement('div'); content.className = 'chat-content';
+    const bubble = document.createElement('div'); bubble.className = 'chat-bubble'; bubble.textContent = msg.body;
+    const time = document.createElement('div'); time.className = 'chat-time'; time.textContent = msg.created_at || '';
+    content.append(bubble, time); row.appendChild(content); thread.appendChild(row);
+  }
+
+  if (textarea) {
+    textarea.addEventListener('input', updateComposer);
+    textarea.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (textarea.value.trim()) form.requestSubmit();
+      }
+    });
+    updateComposer();
+    scrollToBottom();
+  }
+
+  if (form && thread) {
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const body = textarea.value.trim();
+      if (!body) return;
+      sendButton.disabled = true;
+      try {
+        const res = await fetch(form.action + '?format=json', {
+          method: 'POST', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: JSON.stringify({receiver_id: form.receiver_id.value, body})
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Unable to send message.');
+        const empty = thread.querySelector('.first-message'); if (empty) empty.remove();
+        addMessage(data.message, Number(thread.dataset.currentId));
+        textarea.value = ''; updateComposer(); scrollToBottom();
+      } catch (err) {
+        alert(err.message);
+        updateComposer();
+      }
+    });
+  }
+
+  if (thread) {
+    const otherId = thread.dataset.otherId;
+    const currentId = Number(thread.dataset.currentId);
+    let lastId = Math.max(0, ...Array.from(thread.querySelectorAll('[data-message-id]')).map(x => Number(x.dataset.messageId)));
+    const pollMessages = async () => {
+      try {
+        const res = await fetch(`/messages/${otherId}?format=json`, {headers: {'Accept':'application/json'}, cache: 'no-store'});
+        if (!res.ok) return;
+        const data = await res.json();
+        let added = false;
+        (data.messages || []).forEach(msg => { if (Number(msg.id) > lastId) { addMessage(msg, currentId); lastId = Math.max(lastId, Number(msg.id)); added = true; } });
+        if (added) scrollToBottom();
+      } catch (_) {}
+    };
+    setInterval(pollMessages, 500);
+    setInterval(refreshConversationList, 500);
+  } else {
+    setInterval(refreshConversationList, 500);
+  }
+
+  // Refresh the Chats panel immediately, then keep it synchronized with new messages.
+  refreshConversationList();
+})();
+</script>
 {% endblock %}

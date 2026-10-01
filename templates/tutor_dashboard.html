@@ -60,11 +60,17 @@
         <article class="card booking-card">
           <div>
             <h3>{{ b['subject_name'] }} • {{ b['student_name'] }}</h3>
+            <a class="ticket-link" href="{{ url_for('booking_ticket', booking_id=b['id']) }}">Ticket {{ b['ticket_code'] }}</a>
             <p>{{ b['session_date'] }} • {{ b['start_time'] }}–{{ b['end_time'] }}</p>
             {% if b['request_note'] %}<p class="muted">{{ b['request_note'] }}</p>{% endif %}
           </div>
           <div class="booking-meta">
             <span class="badge {{ b['status'] }}">{{ b['status'] }}</span>
+            {% if b['payment_status'] == 'paid' %}<span class="payment-badge paid">Paid & Confirmed</span>
+            {% elif b['payment_status'] == 'pending' %}<span class="payment-badge pending">Student Says Paid</span>
+              <form method="post" action="{{ url_for('payment_confirm', booking_id=b['id']) }}" onsubmit="return confirm('Confirm that you received this payment?');"><button class="btn small" type="submit">Confirm Payment</button></form>
+            {% elif b['payment_status'] == 'unpaid' and b['total_fee'] > 0 %}<span class="payment-badge unpaid">Unpaid · ₱{{ '%.2f'|format(b['total_fee']) }}</span>
+            {% endif %}
             {% if b['status'] == 'pending' %}
               <div class="inline-actions">
                 <form method="post" action="{{ url_for('booking_status', booking_id=b['id']) }}">
@@ -77,10 +83,23 @@
                 </form>
               </div>
             {% elif b['status'] == 'confirmed' %}
-              <form method="post" action="{{ url_for('booking_status', booking_id=b['id']) }}">
-                <input type="hidden" name="status" value="completed">
-                <button class="btn small" type="submit">Mark completed</button>
-              </form>
+              {% if b['payment_status'] in ['paid', 'not_applicable'] %}
+                <form method="post" action="{{ url_for('booking_status', booking_id=b['id']) }}" onsubmit="return confirm('Mark this tutoring session as completed?');">
+                  <input type="hidden" name="status" value="completed">
+                  <button class="btn small" type="submit">Mark as Completed</button>
+                </form>
+              {% else %}
+                <span class="muted payment-required-note">Waiting for student payment and tutor payment confirmation before completion.</span>
+              {% endif %}
+              <button class="btn small danger" type="button" onclick="document.getElementById('cancel-{{ b['id'] }}').hidden=false">Cancel Booking</button>
+              <div id="cancel-{{ b['id'] }}" class="report-box" hidden>
+                <form method="post" action="{{ url_for('cancel_booking', booking_id=b['id']) }}">
+                  <label>Reason for cancellation
+                    <textarea name="cancellation_reason" rows="3" maxlength="1000" required placeholder="Explain why you need to cancel this booking."></textarea>
+                  </label>
+                  <div class="form-actions"><button class="btn danger small" type="submit">Confirm Cancellation</button><button class="btn secondary small" type="button" onclick="document.getElementById('cancel-{{ b['id'] }}').hidden=true">Keep Booking</button></div>
+                </form>
+              </div>
             {% endif %}
           </div>
         </article>

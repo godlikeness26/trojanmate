@@ -11,7 +11,11 @@
 
 <section class="profile-summary card">
   <div class="profile-head">
-    <div class="avatar large">{{ tutor['name'][0]|upper }}</div>
+    {% if tutor['profile_picture'] %}
+      <img class="profile-photo-large" src="{{ url_for('static', filename='uploads/' ~ tutor['profile_picture']) }}" alt="{{ tutor['name'] }}">
+    {% else %}
+      <div class="avatar large">{{ tutor['name'][0]|upper }}</div>
+    {% endif %}
     <div>
       <div class="verified-row">
         <h2>{{ tutor['name'] }}</h2>
@@ -74,7 +78,10 @@
         <li>Flexible booking availability</li>
         <li>Academic support and review</li>
       </ul>
-      <a class="btn" href="{{ url_for('book', tutor_id=tutor['id']) }}">Request booking</a>
+      <div class="card-actions">
+        <a class="btn" href="{{ url_for('book', tutor_id=tutor['id']) }}">Request booking</a>
+        <a class="btn secondary" href="{{ url_for('messages', to=tutor['id']) }}">Message tutor</a>
+      </div>
     </div>
   </aside>
 </div>

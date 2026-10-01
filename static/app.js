@@ -241,3 +241,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 });
+
+// Minimum-rating slider on the tutor discovery page.
+(function initRatingSlider() {
+  const slider = document.getElementById('rating_min');
+  const output = document.getElementById('rating_min_value');
+  if (!slider || !output) return;
+
+  const update = () => {
+    const value = Math.max(0, Math.min(5, Number(slider.value) || 0));
+    slider.value = value.toFixed(1);
+    slider.setAttribute('aria-valuenow', value.toFixed(1));
+    output.textContent = value === 0 ? 'Any' : `${value.toFixed(1)}+`;
+    slider.style.setProperty('--rating-progress', `${(value / 5) * 100}%`);
+  };
+
+  slider.addEventListener('input', update);
+  update();
+})();

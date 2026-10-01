@@ -1,15 +1,136 @@
 {% extends "base.html" %}
 {% block title %}Admin Management | TrojanMate{% endblock %}
 {% block content %}
-<div class="pagehead"><div><span class="eyebrow">ADMIN</span><h1>System Management</h1></div></div>
+<div class="pagehead">
+  <div><span class="eyebrow">ADMIN</span><h1>System Management</h1></div>
+</div>
+
 <h2>Pending Tutor Verification</h2>
 {% for t in pending %}
-<div class="card booking"><div><h3>{{ t['name'] }}</h3><p>{{ t['email'] }}</p><p><b>Qualifications:</b> {{ t['qualifications'] or 'Not provided' }}</p><p><b>Experience:</b> {{ t['experience'] or 'Not provided' }}</p></div>
-<form method="post" action="{{ url_for('verify_tutor', tutor_id=t['id']) }}"><input type="hidden" name="action" value="verify"><button class="btn">Verify Tutor</button></form></div>
-{% else %}<div class="empty">No pending tutor profiles.</div>{% endfor %}
+<div class="card booking">
+  <div><h3>{{ t['name'] }}</h3><p>{{ t['email'] }}</p><p><b>Qualifications:</b> {{ t['qualifications'] or 'Not provided' }}</p><p><b>Experience:</b> {{ t['experience'] or 'Not provided' }}</p></div>
+  <form method="post" action="{{ url_for('verify_tutor', tutor_id=t['id']) }}"><input type="hidden" name="action" value="verify"><button class="btn">Verify Tutor</button></form>
+</div>
+{% else %}<div style="color:white" class="empty">No pending tutor profiles.</div>{% endfor %}
 
-<h2>Recent Users</h2>
-<div class="tablewrap"><table><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th></tr>{% for u in users %}<tr><td>{{ u['name'] }}</td><td>{{ u['email'] }}</td><td>{{ u['role'] }}</td><td>{{ u['created_at'] }}</td></tr>{% endfor %}</table></div>
+{% if g.user['email']|lower == 'admin@trojanmate.local' and pending_admins %}
+<div class="admin-section-heading"><div><h2>Pending Administrator Verification</h2><p style="color:white" class="muted">New administrator registrations must be approved by the System Owner before they can log in.</p></div></div>
+{% for a in pending_admins %}
+<div class="card booking" style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
+  <div><h3>{{ a['name'] }}</h3><p>{{ a['email'] }}</p><p><b>University Role:</b> {{ a['university_role'] or 'Not provided' }}</p><p><b>Registered:</b> {{ a['created_at'] }}</p></div>
+  <div class="user-actions">
+    <form method="post" action="{{ url_for('admin_approve_admin', user_id=a['id']) }}"><button class="btn small" type="submit">Approve Administrator</button></form>
+    <form method="post" action="{{ url_for('admin_reject_admin', user_id=a['id']) }}" onsubmit="return confirm('Reject and remove this administrator registration?');"><button class="btn danger small" type="submit">Reject</button></form>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="admin-section-heading">
+  <div><h2>Accounts</h2><p style="color:white" class="muted">Manage students, tutors, and administrator accounts separately.</p></div>
+</div>
+
+<div class="admin-view-tabs">
+  <a class="admin-view-tab {% if view == 'students' %}active{% endif %}" href="{{ url_for('admin', view='students') }}">
+    <span>Students</span><b>{{ counts.students }}</b>
+  </a>
+  <a class="admin-view-tab {% if view == 'tutors' %}active{% endif %}" href="{{ url_for('admin', view='tutors') }}">
+    <span>Tutors</span><b>{{ counts.tutors }}</b>
+  </a>
+  <a class="admin-view-tab {% if view == 'admins' %}active{% endif %}" href="{{ url_for('admin', view='admins') }}">
+    <span>Administrators</span><b>{{ counts.admins }}</b>
+  </a>
+  <a class="admin-view-tab {% if view == 'reports' %}active{% endif %}" href="{{ url_for('admin', view='reports') }}">
+    <span>Reports / Disputes</span><b>{{ counts.reports }}</b>
+  </a>
+</div>
+
+{% if view == 'admins' and g.user['email']|lower == 'admin@trojanmate.local' %}
+<div class="card admin-create-card">
+  <div class="admin-create-header">
+    <div><h3>Create Administrator</h3><p class="muted">Only the TrojanMate system owner can create additional administrator accounts.</p></div>
+  </div>
+  <form method="post" action="{{ url_for('admin_create_admin') }}" class="admin-create-form">
+    <label>Full Name<input type="text" name="name" required></label>
+    <label>Email Address<input type="email" name="email" required></label>
+    <label>Password<input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+    <label>Confirm Password<input type="password" name="confirm_password" minlength="8" required autocomplete="new-password"></label>
+    <div class="form-actions"><button class="btn" type="submit">Create Administrator</button></div>
+  </form>
+</div>
+{% endif %}
+
+<div class="admin-section-heading">
+  <div><h2>{{ 'Students' if view == 'students' else ('Tutors' if view == 'tutors' else 'Administrators') }}</h2>
+  <p style="color:white" class="muted">
+    {% if view == 'students' %}Student accounts and their current tutor status.{% elif view == 'tutors' %}Users who currently have a tutor profile. A user may also remain a student/tutee.{% else %}System administrator accounts. The original admin@trojanmate.local account is the system owner and has authority over additional administrators.{% endif %}
+  </p></div>
+</div>
+
+<div class="tablewrap">
+<table class="admin-users-table">
+<tr><th>Name</th><th>Email</th><th>Role</th>{% if view == 'tutors' %}<th>Verification</th>{% endif %}{% if view == 'admins' %}<th>Approval</th>{% endif %}<th>Created</th><th>Account Controls</th></tr>
+{% for u in users %}
+<tr>
+  <td>{{ u['name'] }}</td>
+  <td>{{ u['email'] }}</td>
+  <td>
+    {% if view == 'admins' %}
+      {% if u['admin_owner'] %}<span class="role-badge role-admin">System Owner</span>{% else %}<span class="role-badge role-admin">Administrator</span>{% endif %}
+    {% elif view == 'tutors' %}<span class="role-badge role-tutor">Tutor</span>
+    {% else %}<span class="role-badge role-student">Student</span>{% endif %}
+  </td>
+  {% if view == 'tutors' %}<td>{% if u['tutor_verified'] %}<span class="status-badge status-verified">Verified</span>{% else %}<span class="status-badge status-pending">Pending</span>{% endif %}</td>{% endif %}{% if view == 'admins' %}<td>{% if u['admin_owner'] %}<span class="status-badge status-verified">Approved</span>{% elif u['admin_approved'] %}<span class="status-badge status-verified">Approved</span>{% else %}<span class="status-badge status-pending">Pending Owner Approval</span>{% endif %}</td>{% endif %}
+  <td>{{ u['created_at'] }}</td>
+  <td class="user-actions">
+    {% if view == 'admins' %}
+      {% if u['admin_owner'] %}
+        <span class="protected-label">System Owner</span>
+      {% elif g.user['email']|lower == 'admin@trojanmate.local' %}
+        <a class="btn small" href="{{ url_for('admin_edit_user', user_id=u['id']) }}">Edit Account</a>
+        <form method="post" action="{{ url_for('admin_delete_admin', user_id=u['id']) }}" onsubmit="return confirm('Remove this administrator account? This permanently deletes the administrator account and cannot be undone.');"><button class="btn danger small" type="submit">Remove Admin</button></form>
+      {% elif u['id'] == g.user['id'] %}
+        <a class="btn small" href="{{ url_for('admin_edit_user', user_id=u['id']) }}">Edit Account</a>
+      {% else %}
+        <span class="protected-label">Protected</span>
+      {% endif %}
+    {% elif view == 'tutors' %}
+      <a class="btn small" href="{{ url_for('admin_edit_user', user_id=u['id']) }}">Edit Account</a>
+      {% if u['tutor_profile_id'] %}
+      <form method="post" action="{{ url_for('admin_remove_tutor', tutor_profile_id=u['tutor_profile_id']) }}" onsubmit="return confirm('Remove this user as a tutor? The student account will remain, but tutor profile, availability, tutor subjects, and tutor-specific records will be removed.');"><button class="btn danger small" type="submit">Remove as Tutor</button></form>
+      {% endif %}
+    {% else %}
+      <a class="btn small" href="{{ url_for('admin_edit_user', user_id=u['id']) }}">Edit Account</a>
+      <form method="post" action="{{ url_for('admin_delete_user', user_id=u['id']) }}" onsubmit="return confirm('Remove this student account? This permanently deletes the user and associated records. This action cannot be undone.');"><button class="btn danger small" type="submit">Remove User</button></form>
+    {% endif %}
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="empty-table">No accounts found in this view.</td></tr>
+{% endfor %}
+</table>
+</div>
+
+{% if view == 'reports' %}
+<div class="admin-section-heading"><div><h2>Booking Reports and Disputes</h2><p style="color:white" class="muted">Reports submitted by students or tutors are shown here so administrators can review payment and session disputes.</p></div></div>
+<div class="report-admin-list">
+{% for r in reports %}
+  <article class="card admin-report-card">
+    <div class="report-admin-head"><div><strong>{{ r['ticket_code'] }} · {{ r['subject_name'] }}</strong><p>{{ r['student_name'] }} ↔ {{ r['tutor_name'] }}</p></div><span class="report-status {{ r['status'] }}">{{ r['status']|title }}</span></div>
+    <p><b>Reported by:</b> {{ r['reporter_name'] }} · <b>Reason:</b> {{ r['reason'] }}</p>
+    <p>{{ r['description'] or 'No additional details provided.' }}</p>
+    <small>{{ r['created_at'] }}</small>
+    <form method="post" action="{{ url_for('admin_report_status', report_id=r['id']) }}" class="report-admin-form">
+      <select name="status"><option value="open" {% if r['status']=='open' %}selected{% endif %}>Open</option><option value="reviewing" {% if r['status']=='reviewing' %}selected{% endif %}>Reviewing</option><option value="resolved" {% if r['status']=='resolved' %}selected{% endif %}>Resolved</option><option value="dismissed" {% if r['status']=='dismissed' %}selected{% endif %}>Dismissed</option></select>
+      <input type="text" name="admin_note" value="{{ r['admin_note'] or '' }}" placeholder="Admin note">
+      <button class="btn small" type="submit">Update Report</button>
+      <a class="btn small secondary" href="{{ url_for('booking_ticket', booking_id=r['booking_id']) }}">View Ticket</a>
+    </form>
+  </article>
+{% else %}<div class="empty-state"><h3>No reports</h3><p>No booking disputes have been reported.</p></div>{% endfor %}
+</div>
+{% endif %}
+
 <h2>Recent Bookings</h2>
 <div class="tablewrap"><table><tr><th>Student</th><th>Tutor</th><th>Subject</th><th>Date</th><th>Status</th><th>Payment</th></tr>{% for b in bookings %}<tr><td>{{ b['student_name'] }}</td><td>{{ b['tutor_name'] }}</td><td>{{ b['subject_name'] }}</td><td>{{ b['session_date'] }} {{ b['start_time'] }}</td><td>{{ b['status'] }}</td><td>{{ b['payment_status'] }}</td></tr>{% endfor %}</table></div>
 {% endblock %}

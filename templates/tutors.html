@@ -18,18 +18,42 @@
       <label for="subject">Subject</label>
       <select id="subject" name="subject">
         <option value="">All subjects</option>
-        {% for s in subjects %}
-          <option value="{{ s['name'] }}" {% if selected_subject == s['name'] %}selected{% endif %}>{{ s['name'] }}</option>
+        <optgroup label="Common Courses">
+          {% for s in subjects if s['program'] == 'BSCpE, BSIE' %}
+            <option value="{{ s['name'] }}" {% if selected_subject == s['name'] %}selected{% endif %}>{{ s['code'] }} — {{ s['name'].split(' — ', 1)[1] if ' — ' in s['name'] else s['name'] }}</option>
+          {% endfor %}
+        </optgroup>
+        {% for program in ["BSCpE", "BSIE"] %}
+          <optgroup label="{{ program }}">
+            {% for s in subjects if s['program'] == program %}
+              <option value="{{ s['name'] }}" {% if selected_subject == s['name'] %}selected{% endif %}>{{ s['code'] }} — {{ s['name'].split(' — ', 1)[1] if ' — ' in s['name'] else s['name'] }}</option>
+            {% endfor %}
+          </optgroup>
         {% endfor %}
       </select>
     </div>
-    <div class="field-group">
-      <label for="rating_min">Minimum rating</label>
-      <select id="rating_min" name="rating_min">
-        <option value="0" {% if rating_min == '0' %}selected{% endif %}>Any</option>
-        <option value="4" {% if rating_min == '4' %}selected{% endif %}>4.0+</option>
-        <option value="4.5" {% if rating_min == '4.5' %}selected{% endif %}>4.5+</option>
-      </select>
+    <div class="field-group rating-filter-group">
+      <div class="rating-filter-label">
+        <label for="rating_min">Minimum rating</label>
+        <output id="rating_min_value" for="rating_min">{% if rating_min == '0' %}Any{% else %}{{ '%.1f'|format(rating_min|float) }}+{% endif %}</output>
+      </div>
+      <input
+        id="rating_min"
+        name="rating_min"
+        class="rating-range"
+        type="range"
+        min="0"
+        max="5"
+        step="0.1"
+        value="{{ rating_min|float }}"
+        aria-label="Minimum rating from 0 to 5"
+        aria-valuemin="0"
+        aria-valuemax="5"
+        aria-valuenow="{{ rating_min|float }}"
+      >
+      <div class="rating-scale" aria-hidden="true">
+        <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+      </div>
     </div>
     <div class="field-group">
       <label for="price_max">Max hourly rate</label>

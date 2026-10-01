@@ -64,12 +64,35 @@
         <article class="card booking-card">
           <div>
             <h3>{{ b['subject_name'] }} with {{ b['tutor_name'] }}</h3>
+          <a class="ticket-link" href="{{ url_for('booking_ticket', booking_id=b['id']) }}">Ticket {{ b['ticket_code'] }}</a>
             <p>{{ b['session_date'] }} • {{ b['start_time'] }}–{{ b['end_time'] }}</p>
             {% if b['request_note'] %}<p class="muted">{{ b['request_note'] }}</p>{% endif %}
           </div>
           <div class="booking-meta">
             <span class="badge {{ b['status'] }}">{{ b['status'] }}</span>
-            <span class="muted">{{ b['payment_status'] }}</span>
+            <span class="payment-badge {% if b['payment_status'] == 'paid' %}paid{% elif b['payment_status'] == 'pending' %}pending{% else %}unpaid{% endif %}">{{ 'Payment Confirmed' if b['payment_status'] == 'paid' else ('Awaiting Tutor Confirmation' if b['payment_status'] == 'pending' else ('Unpaid' if b['payment_status'] == 'unpaid' else 'No Payment Required')) }}</span>
+            <a class="btn small secondary" href="{{ url_for('booking_ticket', booking_id=b['id']) }}">View Ticket</a>
+            {% if b['status'] == 'confirmed' and b['payment_status'] == 'unpaid' and b['total_fee'] > 0 %}
+              <form method="post" enctype="multipart/form-data" action="{{ url_for('payment_mark_paid', booking_id=b['id']) }}" class="payment-send-form" onsubmit="return confirm('Confirm that you have sent the payment for this session?');">
+                <label class="file-label">Receipt (optional)
+                  <input type="file" name="payment_receipt" accept="image/png,image/jpeg,image/webp">
+                </label>
+                <button class="btn small" type="submit">Payment Sent</button>
+              </form>
+            {% elif b['status'] == 'confirmed' and b['payment_status'] == 'pending' %}
+              <span class="payment-badge pending">Payment sent — awaiting tutor confirmation</span>
+            {% endif %}
+            {% if b['status'] in ['pending','confirmed'] %}
+              <button class="btn small danger" type="button" onclick="document.getElementById('student-cancel-{{ b['id'] }}').hidden=false">Cancel Booking</button>
+              <div id="student-cancel-{{ b['id'] }}" class="report-box" hidden>
+                <form method="post" action="{{ url_for('cancel_booking_by_student', booking_id=b['id']) }}">
+                  <label>Reason for cancellation
+                    <textarea name="cancellation_reason" rows="3" maxlength="1000" required placeholder="Explain why you need to cancel this booking."></textarea>
+                  </label>
+                  <div class="form-actions"><button class="btn danger small" type="submit">Confirm Cancellation</button><button class="btn secondary small" type="button" onclick="document.getElementById('student-cancel-{{ b['id'] }}').hidden=true">Keep Booking</button></div>
+                </form>
+              </div>
+            {% endif %}
           </div>
         </article>
       {% endfor %}
@@ -108,7 +131,7 @@
 
 <section class="card section-block">
   <div class="section-header">
-    <h2>Available tutors</h2>
+    <h2 style="color: black;">Available tutors</h2>
     <a href="{{ url_for('tutors') }}" class="text-link">Browse all</a>
   </div>
   {% if tutors %}
@@ -148,18 +171,30 @@
 
 <section class="card section-block">
   <div class="section-header">
-    <h2>My bookings</h2>
+    <h2 style="color: black;">My bookings</h2>
   </div>
   {% if bookings %}
     {% for b in bookings %}
       <div class="card booking-card nested">
         <div>
           <h3>{{ b['subject_name'] }} with {{ b['tutor_name'] }}</h3>
+          <a class="ticket-link" href="{{ url_for('booking_ticket', booking_id=b['id']) }}">Ticket {{ b['ticket_code'] }}</a>
           <p>{{ b['session_date'] }} • {{ b['start_time'] }}–{{ b['end_time'] }}</p>
           {% if b['request_note'] %}<p class="muted">{{ b['request_note'] }}</p>{% endif %}
+          {% if b['status'] == 'cancelled' and b['cancellation_reason'] %}<p class="cancellation-note"><strong>Cancellation reason:</strong> {{ b['cancellation_reason'] }}</p>{% endif %}
         </div>
         <div class="booking-meta">
           <span class="badge {{ b['status'] }}">{{ b['status'] }}</span>
+          {% if b['payment_status'] == 'paid' %}<span class="payment-badge paid">Paid</span>
+          {% elif b['payment_status'] == 'pending' %}<span class="payment-badge pending">Awaiting Tutor</span>
+          {% elif b['payment_status'] == 'unpaid' and b['status'] == 'confirmed' and b['total_fee'] > 0 %}
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('payment_mark_paid', booking_id=b['id']) }}" class="payment-send-form" onsubmit="return confirm('Confirm that you have sent the payment for this session?');">
+              <label class="file-label">Receipt (optional)
+                <input type="file" name="payment_receipt" accept="image/png,image/jpeg,image/webp">
+              </label>
+              <button class="btn small" type="submit">Payment Sent</button>
+            </form>
+          {% endif %}
           {% if b['status'] == 'completed' %}
             <form method="post" action="{{ url_for('feedback_submit', booking_id=b['id']) }}" class="feedback-form">
               <select name="rating" required>
